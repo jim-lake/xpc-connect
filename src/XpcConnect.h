@@ -21,7 +21,7 @@ public:
   static NAN_METHOD(SendMessage);
 
 private:
-  XpcConnect(std::string serviceName);
+  XpcConnect(std::string serviceName, uint64_t flags);
   ~XpcConnect();
 
   static xpc_object_t ValueToXpcObject(v8::Local<v8::Value> object);
@@ -43,6 +43,7 @@ private:
 
 private:
   std::string serviceName;
+  uint64_t flags;
   dispatch_queue_t dispatchQueue;
   xpc_connection_t xpcConnection;
   bool calledSetup;

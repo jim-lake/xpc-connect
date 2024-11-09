@@ -27,9 +27,10 @@ NAN_MODULE_INIT(XpcConnect::Init) {
   Nan::Set(target, Nan::New("XpcConnect").ToLocalChecked(), Nan::GetFunction(tmpl).ToLocalChecked());
 }
 
-XpcConnect::XpcConnect(std::string serviceName) :
+XpcConnect::XpcConnect(std::string serviceName, uint64_t flags) :
   node::ObjectWrap(),
   serviceName(serviceName),
+  flags(flags),
   dispatchQueue(nullptr),
   xpcConnection(nullptr),
   calledSetup(false),
@@ -61,7 +62,7 @@ void XpcConnect::setup() {
   uv_mutex_init(&this->eventQueueMutex);
 
   this->dispatchQueue = dispatch_queue_create(this->serviceName.c_str(), 0);
-  this->xpcConnection = xpc_connection_create_mach_service(this->serviceName.c_str(), this->dispatchQueue, XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
+  this->xpcConnection = xpc_connection_create_mach_service(this->serviceName.c_str(), this->dispatchQueue, this->flags);
 
   xpc_connection_set_event_handler(this->xpcConnection, ^(xpc_object_t event) {
     xpc_retain(event);
@@ -96,14 +97,18 @@ void XpcConnect::queueEvent(xpc_object_t event) {
 NAN_METHOD(XpcConnect::New) {
   Nan::HandleScope scope;
   std::string serviceName = "";
+  uint64_t flags = XPC_CONNECTION_MACH_SERVICE_PRIVILEGED;
 
   if (info.Length() > 0 && info[0]->IsString()) {
     Nan::Utf8String arg0(info[0]);
 
     serviceName = *arg0;
   }
+  if (info.Length() > 1 && info[1]->IsUint32()) {
+    flags = info[1]->IntegerValue(Nan::GetCurrentContext()).FromJust();
+  }
 
-  XpcConnect* p = new XpcConnect(serviceName);
+  XpcConnect* p = new XpcConnect(serviceName, flags);
   p->Wrap(info.This());
   info.GetReturnValue().Set(info.This());
 }

@@ -22,7 +22,7 @@
     "validate": "npm run test:coverage"
   },
   "jest": {
-    "testURL": "http://localhost",
+    "testEnvironmentOptions": { "url": "http://localhost" },
     "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx|js)$",
     "moduleFileExtensions": [
       "ts",
