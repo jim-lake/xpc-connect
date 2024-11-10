@@ -141,7 +141,9 @@ NAN_METHOD(XpcConnect::Shutdown) {
 xpc_object_t XpcConnect::ValueToXpcObject(Local<Value> value) {
   xpc_object_t xpcObject = NULL;
 
-  if (value->IsInt32() || value->IsUint32()) {
+  if (value->IsBigInt()) {
+    xpcObject = xpc_uint64_create(value->ToBigInt(Nan::GetCurrentContext()).ToLocalChecked()->Uint64Value());
+  } else if (value->IsInt32()) {
     xpcObject = xpc_int64_create(value->IntegerValue(Nan::GetCurrentContext()).FromJust());
   } else if (value->IsString()) {
     Nan::Utf8String valueString(value);

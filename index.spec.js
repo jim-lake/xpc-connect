@@ -29,6 +29,33 @@ test('test bluetooth connectivity', done => {
   }, 500);  
 });
 
+test('test2', done => {
+  let service = new xpcConnect('com.ares.test.server', 0);
+
+
+  service.on('error', function(message) {
+    console.log('error: ' + JSON.stringify(message, undefined, 2));
+  });
+
+
+  service.on('event', function(event) {
+    console.log('event: ' + JSON.stringify(event, undefined, 2));
+  });
+
+  service.setup();
+
+  service.sendMessage({
+    f: 1n,
+    root: Buffer.from("1234", "hex"),
+    proxynum: 1n,
+  });
+
+  setTimeout(function() {
+    service.shutdown();
+    done();
+  }, 500);
+});
+
 test('multiple setups should fail', () => {
   let svc = new xpcConnect('com.apple.blued');
   svc.setup();
