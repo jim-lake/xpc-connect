@@ -239,6 +239,7 @@ Local<Value> XpcConnect::XpcObjectToValue(xpc_object_t xpcObject) {
     value = Nan::CopyBuffer((char *)xpc_uuid_get_bytes(xpcObject), sizeof(uuid_t)).ToLocalChecked();
   } else {
     NSLog(@"XpcObjectToValue: Could not convert to value!, %@", xpcObject);
+    value = Nan::Undefined();
   }
 
   return value;
