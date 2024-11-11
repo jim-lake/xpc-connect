@@ -66,7 +66,7 @@ void XpcConnect::setup() {
 
   xpc_connection_set_event_handler(this->xpcConnection, ^(xpc_object_t event) {
     xpc_retain(event);
-    this->queueEvent(event);
+    this->queueEvent(event, 0);
   });
 
   xpc_connection_activate(this->xpcConnection);
@@ -79,16 +79,23 @@ void XpcConnect::shutdown() {
   }
 }
 
-void XpcConnect::sendMessage(xpc_object_t message) {
+void XpcConnect::sendMessage(xpc_object_t message, uint32_t reply_num) {
   if (this->xpcConnection != nullptr) {
-    xpc_connection_send_message(this->xpcConnection, message);
+    if (reply_num > 0) {
+      xpc_connection_send_message_with_reply(this->xpcConnection, message, NULL, ^(xpc_object_t  _Nonnull reply) {
+        xpc_retain(reply);
+        this->queueEvent(reply, reply_num);
+      });
+    } else {
+      xpc_connection_send_message(this->xpcConnection, message);
+    }
   }
 }
 
-void XpcConnect::queueEvent(xpc_object_t event) {
+void XpcConnect::queueEvent(xpc_object_t event, uint32_t reply_num) {
 
   uv_mutex_lock(&this->eventQueueMutex);
-  eventQueue.push(event);
+  eventQueue.push(EventReply(event, reply_num));
   uv_mutex_unlock(&this->eventQueueMutex);
 
   uv_async_send(this->asyncHandle);
@@ -277,7 +284,8 @@ void XpcConnect::processEventQueue() {
   Nan::HandleScope scope;
 
   while (!this->eventQueue.empty()) {
-    xpc_object_t event = this->eventQueue.front();
+    EventReply reply = this->eventQueue.front();
+    xpc_object_t event = reply.event;
     this->eventQueue.pop();
 
     xpc_type_t eventType = xpc_get_type(event);
@@ -300,21 +308,23 @@ void XpcConnect::processEventQueue() {
         }
       }
 
-      Local<Value> argv[2] = {
+      Local<Value> argv[3] = {
         Nan::New("error").ToLocalChecked(),
-        Nan::New(message).ToLocalChecked()
+        Nan::New(message).ToLocalChecked(),
+        Nan::New(reply.reply_num)
       };
 
-      this->asyncResource->runInAsyncScope(this->handle(), Nan::New("emit").ToLocalChecked(), 2, argv);
+      this->asyncResource->runInAsyncScope(this->handle(), Nan::New("_emit").ToLocalChecked(), 3, argv);
     } else if (eventType == XPC_TYPE_DICTIONARY) {
       Local<Object> eventObject = XpcConnect::XpcDictionaryToObject(event);
 
-      Local<Value> argv[2] = {
+      Local<Value> argv[3] = {
         Nan::New("event").ToLocalChecked(),
-        eventObject
+        eventObject,
+        Nan::New(reply.reply_num)
       };
 
-      this->asyncResource->runInAsyncScope(this->handle(), Nan::New("emit").ToLocalChecked(), 2, argv);
+      this->asyncResource->runInAsyncScope(this->handle(), Nan::New("_emit").ToLocalChecked(), 3, argv);
     }
 
     xpc_release(event);
@@ -350,9 +360,13 @@ NAN_METHOD(XpcConnect::SendMessage) {
     Local<Value> arg0 = info[0];
     if (arg0->IsObject()) {
       Local<Object> object = Local<Object>::Cast(arg0);
+      uint32_t reply_num = 0;
+      if (info.Length() > 1 && info[1]->IsNumber()) {
+        reply_num = info[1]->IntegerValue(Nan::GetCurrentContext()).FromJust();
+      }
 
       xpc_object_t message = XpcConnect::ObjectToXpcObject(object);
-      p->sendMessage(message);
+      p->sendMessage(message, reply_num);
       xpc_release(message);
     }
   }

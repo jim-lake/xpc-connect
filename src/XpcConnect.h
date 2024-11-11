@@ -9,6 +9,11 @@
 #include <xpc/xpc.h>
 #include <nan.h>
 
+struct EventReply {
+  xpc_object_t event;
+  uint32_t reply_num;
+  EventReply(xpc_object_t event, uint32_t reply_num): event(event), reply_num(reply_num) {};
+};
 
 class XpcConnect : public node::ObjectWrap {
 
@@ -37,8 +42,8 @@ private:
 
   void setup();
   void shutdown();
-  void sendMessage(xpc_object_t message);
-  void queueEvent(xpc_object_t event);
+  void sendMessage(xpc_object_t message, uint32_t reply_num);
+  void queueEvent(xpc_object_t event, uint32_t reply_num);
   void processEventQueue();
 
 private:
@@ -53,7 +58,7 @@ private:
   Nan::AsyncResource* asyncResource;
   uv_async_t* asyncHandle;
   uv_mutex_t eventQueueMutex;
-  std::queue<xpc_object_t> eventQueue;
+  std::queue<EventReply> eventQueue;
 
   static Nan::Persistent<v8::FunctionTemplate> constructor_template;
 };

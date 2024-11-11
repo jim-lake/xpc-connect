@@ -33,21 +33,25 @@ test('test2', done => {
   let service = new xpcConnect('com.ares.test.server', 0);
 
 
-  service.on('error', function(message) {
-    console.log('error: ' + JSON.stringify(message, undefined, 2));
+  service.on('error', function(message, reply_num) {
+    console.log('error:', message, reply_num);
   });
 
 
-  service.on('event', function(event) {
-    console.log('event: ' + JSON.stringify(event, undefined, 2));
+  service.on('event', function(event, reply_num) {
+    console.log('event:', event, reply_num);
   });
 
   service.setup();
 
-  service.sendMessage({
-    f: 1n,
-    root: Buffer.from("1234", "hex"),
+  service.sendMessageWithReply({
+    f: 33n,
+    root: Buffer.from('62706c6973743137a048000000000000007f111070696e673a776974685265706c793a007f110f76333240303a38403136403f323400a048000000000000006466006f006f003500e0', 'hex'),
     proxynum: 1n,
+    replysig: `v16@?0@"NSString"8`,
+    sequence: 1n,
+  }, (err, message) => {
+    console.log("reply:", err, message);
   });
 
   setTimeout(function() {
