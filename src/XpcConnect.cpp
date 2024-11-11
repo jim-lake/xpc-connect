@@ -227,6 +227,8 @@ Local<Value> XpcConnect::XpcObjectToValue(xpc_object_t xpcObject) {
 
   if (valueType == XPC_TYPE_INT64) {
     value = Nan::New((int32_t)xpc_int64_get_value(xpcObject));
+  } else if (valueType == XPC_TYPE_UINT64) {
+    value = Nan::New((uint32_t)xpc_uint64_get_value(xpcObject));
   } else if(valueType == XPC_TYPE_STRING) {
     value = Nan::New(xpc_string_get_string_ptr(xpcObject)).ToLocalChecked();
   } else if(valueType == XPC_TYPE_DICTIONARY) {
